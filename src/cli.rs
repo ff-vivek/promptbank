@@ -147,6 +147,14 @@ pub enum CommunityCommands {
     Install {
         /// Name of the prompt to install
         name: String,
+
+        /// Apply (output) the prompt after installing
+        #[arg(short, long)]
+        apply: bool,
+
+        /// Copy to clipboard after installing
+        #[arg(short, long)]
+        copy: bool,
     },
 
     /// Search community prompts
@@ -212,7 +220,7 @@ impl App {
     fn run_community(&mut self, cmd: CommunityCommands) -> Result<()> {
         match cmd {
             CommunityCommands::Browse { category } => self.community_browse(category),
-            CommunityCommands::Install { name } => self.community_install(&name),
+            CommunityCommands::Install { name, apply, copy } => self.community_install(&name, apply, copy),
             CommunityCommands::Search { query } => self.community_search(&query),
             CommunityCommands::Contribute => self.community_contribute(),
         }
@@ -266,7 +274,7 @@ impl App {
         Ok(())
     }
 
-    fn community_install(&mut self, name: &str) -> Result<()> {
+    fn community_install(&mut self, name: &str, apply: bool, copy: bool) -> Result<()> {
         println!("{}", "Fetching community index...".dimmed());
 
         let index = Community::fetch_index()?;
@@ -283,6 +291,7 @@ impl App {
         let prompt = Community::to_local_prompt(community_prompt)?;
         let prompt_name = prompt.name.clone();
         let prompt_id = prompt.id.clone();
+        let prompt_content = prompt.content.clone();
 
         self.bank.add(prompt);
         self.storage.save(&self.bank)?;
@@ -293,6 +302,17 @@ impl App {
             prompt_name,
             prompt_id.cyan()
         );
+
+        if apply {
+            println!("\n{}", "═".repeat(60).dimmed());
+            println!("{}", prompt_content);
+            println!("{}", "═".repeat(60).dimmed());
+        }
+
+        if copy {
+            self.copy_to_clipboard(&prompt_content)?;
+            println!("\n{} Copied to clipboard!", "✓".green());
+        }
 
         Ok(())
     }

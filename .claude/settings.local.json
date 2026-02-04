@@ -18,7 +18,10 @@
       "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank community browse:*)",
       "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank community install:*)",
       "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank community search:*)",
-      "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank list:*)"
+      "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank list:*)",
+      "Bash(git tag:*)",
+      "Bash(promptbank --help:*)",
+      "Bash(promptbank get:*)"
     ]
   }
 }
