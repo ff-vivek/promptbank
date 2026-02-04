@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromptBank - Manage & Share Prompts for Claude AI</title>
+    <meta name="description" content="A powerful CLI tool to manage, share, and apply prompts for Claude AI. Install community prompts with one command.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #0ea5e9;
+            --bg: #0f0f1a;
+            --bg-card: #1a1a2e;
+            --bg-code: #16162a;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #2d2d44;
+            --success: #10b981;
+            --gradient: linear-gradient(135deg, #6366f1 0%, #0ea5e9 100%);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* Navigation */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(15, 15, 26, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            z-index: 100;
+        }
+
+        nav .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 64px;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 32px;
+            list-style: none;
+        }
+
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover {
+            color: var(--text);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+            border: none;
+            font-size: 1rem;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 160px 0 100px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            line-height: 1.1;
+        }
+
+        .hero h1 span {
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 40px;
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .install-cmd {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            margin-top: 40px;
+        }
+
+        .install-cmd code {
+            color: var(--success);
+        }
+
+        .install-cmd button {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.2s;
+        }
+
+        .install-cmd button:hover {
+            color: var(--text);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 100px 0;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title h2 {
+            font-size: 2.5rem;
+            margin-bottom: 16px;
+        }
+
+        .section-title p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 12px;
+        }
+
+        .feature-card p {
+            color: var(--text-muted);
+        }
+
+        /* Demo Section */
+        .demo {
+            padding: 100px 0;
+            background: var(--bg-card);
+        }
+
+        .demo-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .demo-text h2 {
+            font-size: 2.5rem;
+            margin-bottom: 24px;
+        }
+
+        .demo-text p {
+            color: var(--text-muted);
+            margin-bottom: 32px;
+            font-size: 1.1rem;
+        }
+
+        .terminal {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+        }
+
+        .terminal-header {
+            background: var(--border);
+            padding: 12px 16px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .terminal-dot.red { background: #ff5f56; }
+        .terminal-dot.yellow { background: #ffbd2e; }
+        .terminal-dot.green { background: #27ca40; }
+
+        .terminal-body {
+            padding: 20px;
+            line-height: 1.8;
+        }
+
+        .terminal-line {
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-prompt {
+            color: var(--success);
+        }
+
+        .terminal-cmd {
+            color: var(--text);
+        }
+
+        .terminal-output {
+            color: var(--text-muted);
+            padding-left: 20px;
+        }
+
+        .terminal-success {
+            color: var(--success);
+        }
+
+        /* Commands Section */
+        .commands {
+            padding: 100px 0;
+        }
+
+        .commands-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .command-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .command-item code {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--secondary);
+            font-size: 0.95rem;
+        }
+
+        .command-item p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
+        /* CTA Section */
+        .cta {
+            padding: 100px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        .cta::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.1) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .cta h2 {
+            font-size: 2.5rem;
+            margin-bottom: 24px;
+        }
+
+        .cta p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 0;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        footer a {
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .demo-content {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="container">
+            <div class="logo">PromptBank</div>
+            <ul class="nav-links">
+                <li><a href="#features">Features</a></li>
+                <li><a href="#demo">Demo</a></li>
+                <li><a href="#commands">Commands</a></li>
+                <li><a href="https://github.com/ff-vivek/promptbank-community">Community</a></li>
+            </ul>
+            <a href="https://github.com/ff-vivek/promptbank" class="btn btn-secondary">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                </svg>
+                GitHub
+            </a>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="container">
+            <h1>Manage Prompts for<br><span>Claude AI</span></h1>
+            <p>A powerful CLI tool to store, share, and instantly apply prompts. Install community prompts with one command and use them directly in Claude.</p>
+            <div class="hero-buttons">
+                <a href="https://github.com/ff-vivek/promptbank" class="btn btn-primary">
+                    Get Started
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </a>
+                <a href="https://github.com/ff-vivek/promptbank-community" class="btn btn-secondary">
+                    Browse Prompts
+                </a>
+            </div>
+            <div class="install-cmd">
+                <code>cargo install promptbank</code>
+                <button onclick="copyInstall()" title="Copy to clipboard">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                        <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-title">
+                <h2>Everything You Need</h2>
+                <p>Powerful features to manage your AI prompts efficiently</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📦</div>
+                    <h3>Local Storage</h3>
+                    <p>Store all your prompts locally with categories, tags, and full-text search. Your prompts, your control.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <h3>Community Prompts</h3>
+                    <p>Browse and install prompts from the community with a single command. Share your best prompts with others.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Claude Integration</h3>
+                    <p>Automatically install prompts as Claude skills. Use them instantly with /command syntax.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Variables & Templates</h3>
+                    <p>Create reusable templates with {{variables}}. Fill them interactively or via command line.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📋</div>
+                    <h3>Clipboard Support</h3>
+                    <p>Copy prompts directly to clipboard with --copy flag. Paste anywhere you need them.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚀</div>
+                    <h3>Fast Updates</h3>
+                    <p>Binary releases for instant updates. No compilation required - just download and run.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="demo" id="demo">
+        <div class="container">
+            <div class="demo-content">
+                <div class="demo-text">
+                    <h2>One Command to Rule Them All</h2>
+                    <p>Install a community prompt and start using it in Claude immediately. No configuration, no hassle.</p>
+                    <a href="https://github.com/ff-vivek/promptbank#readme" class="btn btn-primary">View Documentation</a>
+                </div>
+                <div class="terminal">
+                    <div class="terminal-header">
+                        <div class="terminal-dot red"></div>
+                        <div class="terminal-dot yellow"></div>
+                        <div class="terminal-dot green"></div>
+                    </div>
+                    <div class="terminal-body">
+                        <div class="terminal-line">
+                            <span class="terminal-prompt">$</span>
+                            <span class="terminal-cmd">promptbank community install code-reviewer</span>
+                        </div>
+                        <div class="terminal-output">Fetching community index...</div>
+                        <div class="terminal-output">Installing 'code-reviewer'...</div>
+                        <div class="terminal-output terminal-success">✓ Saved to promptbank with ID: 4c943ead</div>
+                        <div class="terminal-output terminal-success">✓ Installed as Claude skill: /code-reviewer</div>
+                        <br>
+                        <div class="terminal-line">
+                            <span class="terminal-prompt">$</span>
+                            <span class="terminal-cmd">claude</span>
+                        </div>
+                        <div class="terminal-output">> /code-reviewer</div>
+                        <div class="terminal-output terminal-success">✓ Skill activated!</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="commands" id="commands">
+        <div class="container">
+            <div class="section-title">
+                <h2>Simple Commands</h2>
+                <p>Everything you need, nothing you don't</p>
+            </div>
+            <div class="commands-grid">
+                <div class="command-item">
+                    <code>promptbank add</code>
+                    <p>Add a new prompt interactively or with flags</p>
+                </div>
+                <div class="command-item">
+                    <code>promptbank list</code>
+                    <p>List all prompts, filter by category</p>
+                </div>
+                <div class="command-item">
+                    <code>promptbank get &lt;id&gt;</code>
+                    <p>View a prompt, optionally copy to clipboard</p>
+                </div>
+                <div class="command-item">
+                    <code>promptbank apply &lt;id&gt;</code>
+                    <p>Render a prompt with variable substitution</p>
+                </div>
+                <div class="command-item">
+                    <code>promptbank search &lt;query&gt;</code>
+                    <p>Search prompts by name, tags, or content</p>
+                </div>
+                <div class="command-item">
+                    <code>promptbank community browse</code>
+                    <p>Browse available community prompts</p>
+                </div>
+                <div class="command-item">
+                    <code>promptbank community install &lt;name&gt;</code>
+                    <p>Install a prompt from the community</p>
+                </div>
+                <div class="command-item">
+                    <code>promptbank claude install &lt;id&gt;</code>
+                    <p>Install a prompt as a Claude skill</p>
+                </div>
+                <div class="command-item">
+                    <code>promptbank claude list</code>
+                    <p>List prompts installed in Claude</p>
+                </div>
+                <div class="command-item">
+                    <code>promptbank update</code>
+                    <p>Update promptbank to the latest version</p>
+                </div>
+                <div class="command-item">
+                    <code>promptbank export &lt;file&gt;</code>
+                    <p>Export prompts to a JSON file</p>
+                </div>
+                <div class="command-item">
+                    <code>promptbank import &lt;file&gt;</code>
+                    <p>Import prompts from a JSON file</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="container">
+            <h2>Ready to Get Started?</h2>
+            <p>Install promptbank and supercharge your Claude workflow today.</p>
+            <div class="hero-buttons">
+                <a href="https://crates.io/crates/promptbank" class="btn btn-primary">
+                    Install from crates.io
+                </a>
+                <a href="https://github.com/ff-vivek/promptbank-community" class="btn btn-secondary">
+                    Contribute Prompts
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container">
+            <p>
+                Made with ❤️ for the Claude community
+                &nbsp;•&nbsp;
+                <a href="https://github.com/ff-vivek/promptbank">GitHub</a>
+                &nbsp;•&nbsp;
+                <a href="https://crates.io/crates/promptbank">crates.io</a>
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        function copyInstall() {
+            navigator.clipboard.writeText('cargo install promptbank');
+            alert('Copied to clipboard!');
+        }
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>
