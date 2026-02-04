@@ -130,6 +130,9 @@ pub enum Commands {
     /// Show storage info
     Info,
 
+    /// Update promptbank to the latest version
+    Update,
+
     /// Community prompts - browse, install, and share
     #[command(subcommand)]
     Community(CommunityCommands),
@@ -239,6 +242,8 @@ impl App {
             Commands::Import { input, merge } => self.import_prompts(&input, merge),
 
             Commands::Info => self.show_info(),
+
+            Commands::Update => self.update_self(),
 
             Commands::Community(cmd) => self.run_community(cmd),
 
@@ -802,6 +807,30 @@ impl App {
         }
 
         println!();
+        Ok(())
+    }
+
+    fn update_self(&self) -> Result<()> {
+        println!("{}", "Checking for updates...".dimmed());
+
+        let current_version = env!("CARGO_PKG_VERSION");
+        println!("  Current version: {}", current_version.cyan());
+
+        println!("\n{}", "Updating promptbank...".yellow());
+
+        let status = std::process::Command::new("cargo")
+            .args(["install", "promptbank", "--force"])
+            .status()
+            .map_err(|e| PromptBankError::Storage(format!("Failed to run cargo: {}", e)))?;
+
+        if status.success() {
+            println!("\n{} promptbank updated successfully!", "✓".green());
+            println!("  Restart your terminal to use the new version.");
+        } else {
+            println!("\n{} Update failed. Try manually:", "✗".red());
+            println!("  cargo install promptbank --force");
+        }
+
         Ok(())
     }
 
