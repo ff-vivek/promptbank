@@ -24,7 +24,9 @@
       "Bash(promptbank get:*)",
       "Bash(cat:*)",
       "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank claude:*)",
-      "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank:*)"
+      "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
     ]
   }
 }
