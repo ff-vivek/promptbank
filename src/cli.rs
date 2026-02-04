@@ -842,9 +842,115 @@ impl App {
         println!("{}", "Checking for updates...".dimmed());
 
         let current_version = env!("CARGO_PKG_VERSION");
-        println!("  Current version: {}", current_version.cyan());
+        println!("  Current version: v{}", current_version.cyan());
 
-        println!("\n{}", "Updating promptbank...".yellow());
+        // Fetch latest release from GitHub
+        let release_url = "https://api.github.com/repos/ff-vivek/promptbank/releases/latest";
+        let response = match ureq::get(release_url)
+            .set("User-Agent", "promptbank")
+            .call() {
+                Ok(r) => r,
+                Err(_) => {
+                    println!("  No binary releases found, using cargo install...\n");
+                    return self.update_via_cargo();
+                }
+            };
+
+        let release: serde_json::Value = response
+            .into_json()
+            .map_err(|e| PromptBankError::Storage(format!("Failed to parse release info: {}", e)))?;
+
+        let latest_version = release["tag_name"]
+            .as_str()
+            .unwrap_or("unknown")
+            .trim_start_matches('v');
+
+        println!("  Latest version:  v{}", latest_version.cyan());
+
+        if current_version == latest_version {
+            println!("\n{} Already up to date!", "✓".green());
+            return Ok(());
+        }
+
+        println!("\n{}", "Downloading update...".yellow());
+
+        // Determine platform binary name
+        let binary_name = self.get_platform_binary_name()?;
+
+        // Find the download URL for our platform
+        let assets = release["assets"].as_array()
+            .ok_or_else(|| PromptBankError::Storage("No release assets found".to_string()))?;
+
+        let asset = match assets
+            .iter()
+            .find(|a| a["name"].as_str().map_or(false, |n| n.contains(&binary_name))) {
+                Some(a) => a,
+                None => {
+                    println!("  No binary for {}, using cargo install...\n", binary_name);
+                    return self.update_via_cargo();
+                }
+            };
+
+        let download_url = asset["browser_download_url"]
+            .as_str()
+            .ok_or_else(|| PromptBankError::Storage("No download URL found".to_string()))?;
+
+        // Download the binary
+        let response = ureq::get(download_url)
+            .call()
+            .map_err(|e| PromptBankError::Storage(format!("Failed to download: {}", e)))?;
+
+        // Save to temp file
+        let temp_dir = std::env::temp_dir();
+        let tar_path = temp_dir.join(format!("{}.tar.gz", binary_name));
+        let mut file = std::fs::File::create(&tar_path)?;
+        std::io::copy(&mut response.into_reader(), &mut file)?;
+
+        // Extract and install
+        let current_exe = std::env::current_exe()
+            .map_err(|e| PromptBankError::Storage(format!("Failed to get current exe path: {}", e)))?;
+
+        // Extract using tar
+        let status = std::process::Command::new("tar")
+            .args(["-xzf", tar_path.to_str().unwrap(), "-C", temp_dir.to_str().unwrap()])
+            .status()
+            .map_err(|e| PromptBankError::Storage(format!("Failed to extract: {}", e)))?;
+
+        if !status.success() {
+            return Err(PromptBankError::Storage("Failed to extract archive".to_string()));
+        }
+
+        // Replace current binary
+        let new_binary = temp_dir.join(&binary_name);
+
+        // Make executable
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&new_binary, std::fs::Permissions::from_mode(0o755))?;
+        }
+
+        // Replace the binary
+        std::fs::rename(&new_binary, &current_exe)
+            .or_else(|_| {
+                // If rename fails (cross-device), try copy
+                std::fs::copy(&new_binary, &current_exe)?;
+                std::fs::remove_file(&new_binary)?;
+                Ok::<(), std::io::Error>(())
+            })
+            .map_err(|e| PromptBankError::Storage(format!("Failed to install: {}", e)))?;
+
+        // Cleanup
+        let _ = std::fs::remove_file(&tar_path);
+
+        println!("\n{} Updated to v{}!", "✓".green(), latest_version);
+        println!("  Restart your terminal to use the new version.");
+
+        Ok(())
+    }
+
+    fn update_via_cargo(&self) -> Result<()> {
+        println!("{}", "Updating via cargo install...".yellow());
 
         let status = std::process::Command::new("cargo")
             .args(["install", "promptbank", "--force"])
@@ -860,6 +966,26 @@ impl App {
         }
 
         Ok(())
+    }
+
+    fn get_platform_binary_name(&self) -> Result<String> {
+        let os = std::env::consts::OS;
+        let arch = std::env::consts::ARCH;
+
+        let name = match (os, arch) {
+            ("macos", "x86_64") => "promptbank-macos-x86_64",
+            ("macos", "aarch64") => "promptbank-macos-aarch64",
+            ("linux", "x86_64") => "promptbank-linux-x86_64",
+            ("linux", "aarch64") => "promptbank-linux-aarch64",
+            _ => {
+                return Err(PromptBankError::Storage(format!(
+                    "Unsupported platform: {}-{}. Use 'cargo install promptbank' instead.",
+                    os, arch
+                )));
+            }
+        };
+
+        Ok(name.to_string())
     }
 
     fn print_prompt_summary(&self, prompt: &Prompt, full: bool) {
