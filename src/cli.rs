@@ -3,6 +3,7 @@ use colored::*;
 use dialoguer::{Editor, Input, Select};
 use std::path::PathBuf;
 
+use crate::community::Community;
 use crate::error::{PromptBankError, Result};
 use crate::prompt::{Prompt, PromptBank, PromptCategory};
 use crate::storage::Storage;
@@ -127,6 +128,35 @@ pub enum Commands {
 
     /// Show storage info
     Info,
+
+    /// Community prompts - browse, install, and share
+    #[command(subcommand)]
+    Community(CommunityCommands),
+}
+
+#[derive(Subcommand)]
+pub enum CommunityCommands {
+    /// Browse available community prompts
+    Browse {
+        /// Filter by category
+        #[arg(short, long)]
+        category: Option<String>,
+    },
+
+    /// Install a prompt from the community
+    Install {
+        /// Name of the prompt to install
+        name: String,
+    },
+
+    /// Search community prompts
+    Search {
+        /// Search query
+        query: String,
+    },
+
+    /// Show info about contributing
+    Contribute,
 }
 
 pub struct App {
@@ -174,7 +204,150 @@ impl App {
             Commands::Import { input, merge } => self.import_prompts(&input, merge),
 
             Commands::Info => self.show_info(),
+
+            Commands::Community(cmd) => self.run_community(cmd),
         }
+    }
+
+    fn run_community(&mut self, cmd: CommunityCommands) -> Result<()> {
+        match cmd {
+            CommunityCommands::Browse { category } => self.community_browse(category),
+            CommunityCommands::Install { name } => self.community_install(&name),
+            CommunityCommands::Search { query } => self.community_search(&query),
+            CommunityCommands::Contribute => self.community_contribute(),
+        }
+    }
+
+    fn community_browse(&self, category: Option<String>) -> Result<()> {
+        println!("{}", "Fetching community prompts...".dimmed());
+
+        let index = Community::fetch_index()?;
+
+        let prompts: Vec<_> = if let Some(cat) = category {
+            index
+                .prompts
+                .iter()
+                .filter(|p| p.category.to_lowercase() == cat.to_lowercase())
+                .collect()
+        } else {
+            index.prompts.iter().collect()
+        };
+
+        if prompts.is_empty() {
+            println!("{}", "No community prompts found.".yellow());
+            return Ok(());
+        }
+
+        println!(
+            "\n{} {} community prompt(s) available:\n",
+            "→".blue(),
+            prompts.len().to_string().cyan()
+        );
+
+        for prompt in prompts {
+            println!(
+                "  {} [{}] by {}",
+                prompt.name.bold(),
+                prompt.category.yellow(),
+                prompt.author.dimmed()
+            );
+            println!("    {}", prompt.description);
+            if !prompt.tags.is_empty() {
+                println!("    Tags: {}", prompt.tags.join(", ").blue());
+            }
+            println!();
+        }
+
+        println!(
+            "Install with: {} <name>",
+            "promptbank community install".cyan()
+        );
+
+        Ok(())
+    }
+
+    fn community_install(&mut self, name: &str) -> Result<()> {
+        println!("{}", "Fetching community index...".dimmed());
+
+        let index = Community::fetch_index()?;
+
+        let entry = index
+            .prompts
+            .iter()
+            .find(|p| p.name.to_lowercase() == name.to_lowercase())
+            .ok_or_else(|| PromptBankError::PromptNotFound(name.to_string()))?;
+
+        println!("Installing '{}'...", entry.name);
+
+        let community_prompt = Community::fetch_prompt(&entry.path)?;
+        let prompt = Community::to_local_prompt(community_prompt)?;
+        let prompt_name = prompt.name.clone();
+        let prompt_id = prompt.id.clone();
+
+        self.bank.add(prompt);
+        self.storage.save(&self.bank)?;
+
+        println!(
+            "{} Installed '{}' with ID: {}",
+            "✓".green(),
+            prompt_name,
+            prompt_id.cyan()
+        );
+
+        Ok(())
+    }
+
+    fn community_search(&self, query: &str) -> Result<()> {
+        println!("{}", "Searching community prompts...".dimmed());
+
+        let index = Community::fetch_index()?;
+        let results = Community::search(&index, query);
+
+        if results.is_empty() {
+            println!("{} No community prompts matching '{}'", "→".yellow(), query);
+            return Ok(());
+        }
+
+        println!(
+            "\n{} {} result(s) for '{}':\n",
+            "→".blue(),
+            results.len().to_string().cyan(),
+            query
+        );
+
+        for prompt in results {
+            println!(
+                "  {} [{}] by {}",
+                prompt.name.bold(),
+                prompt.category.yellow(),
+                prompt.author.dimmed()
+            );
+            println!("    {}", prompt.description);
+            println!();
+        }
+
+        Ok(())
+    }
+
+    fn community_contribute(&self) -> Result<()> {
+        println!("\n{}", "Contributing to PromptBank Community".bold().underline());
+        println!();
+        println!("To share your prompts with the community:");
+        println!();
+        println!("  1. Fork the repository:");
+        println!("     {}", Community::repo_url().cyan());
+        println!();
+        println!("  2. Add your prompt file to the appropriate category folder:");
+        println!("     prompts/{{category}}/{{your-prompt-name}}.json");
+        println!();
+        println!("  3. Update index.json with your prompt entry");
+        println!();
+        println!("  4. Submit a Pull Request");
+        println!();
+        println!("See the README for detailed contribution guidelines.");
+        println!();
+
+        Ok(())
     }
 
     fn add_prompt(

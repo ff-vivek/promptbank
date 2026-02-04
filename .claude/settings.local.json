@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo init:*)",
+      "Bash(cargo build:*)",
+      "Bash(./target/release/promptbank:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial release of promptbank v0.1.0\n\nA CLI tool to manage and apply prompts for Claude AI.\n\nFeatures:\n- Multiple prompt categories \\(system, skill, agent, role, task, template\\)\n- Variable templating with {{variable}} syntax\n- Search and filter prompts\n- Import/Export as JSON\n- Clipboard support\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(cargo install:*)",
+      "Bash(promptbank --version:*)",
+      "Bash(cargo publish:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd crates.io metadata and MIT license\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(promptbank list:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(git init:*)",
+      "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank community browse:*)",
+      "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank community install:*)",
+      "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank community search:*)",
+      "Bash(/Users/vivekyadav/Documents/Projects/claude/promptbank/target/release/promptbank list:*)"
+    ]
+  }
+}

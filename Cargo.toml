@@ -1,6 +1,6 @@
 [package]
 name = "promptbank"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "A CLI tool to manage and apply prompts for Claude AI"
 license = "MIT"
@@ -21,3 +21,4 @@ colored = "2.1"
 dialoguer = "0.11"
 arboard = "3.4"
 thiserror = "1.0"
+ureq = { version = "2.9", features = ["json"] }

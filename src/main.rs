@@ -1,4 +1,5 @@
 mod cli;
+mod community;
 mod error;
 mod prompt;
 mod storage;
