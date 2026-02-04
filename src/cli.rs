@@ -412,15 +412,43 @@ impl App {
         let prompt_id = prompt.id.clone();
         let prompt_content = prompt.content.clone();
 
-        self.bank.add(prompt);
+        // Save to local promptbank
+        self.bank.add(prompt.clone());
         self.storage.save(&self.bank)?;
 
         println!(
-            "{} Installed '{}' with ID: {}",
+            "{} Saved to promptbank with ID: {}",
             "✓".green(),
-            prompt_name,
             prompt_id.cyan()
         );
+
+        // Install to Claude as skill
+        match ClaudeIntegration::new() {
+            Ok(claude) => {
+                match claude.install(&prompt, InstallType::Skill) {
+                    Ok(_) => {
+                        println!(
+                            "{} Installed as Claude skill: {}",
+                            "✓".green(),
+                            format!("/{}", prompt_name).cyan()
+                        );
+                    }
+                    Err(e) => {
+                        println!(
+                            "{} Could not install to Claude: {}",
+                            "⚠".yellow(),
+                            e
+                        );
+                    }
+                }
+            }
+            Err(_) => {
+                println!(
+                    "{} Claude not found - skipping skill installation",
+                    "⚠".yellow()
+                );
+            }
+        }
 
         if apply {
             println!("\n{}", "═".repeat(60).dimmed());
