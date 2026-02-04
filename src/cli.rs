@@ -3,6 +3,7 @@ use colored::*;
 use dialoguer::{Editor, Input, Select};
 use std::path::PathBuf;
 
+use crate::claude::{ClaudeIntegration, InstallType};
 use crate::community::Community;
 use crate::error::{PromptBankError, Result};
 use crate::prompt::{Prompt, PromptBank, PromptCategory};
@@ -132,6 +133,10 @@ pub enum Commands {
     /// Community prompts - browse, install, and share
     #[command(subcommand)]
     Community(CommunityCommands),
+
+    /// Claude integration - install prompts as skills/commands
+    #[command(subcommand)]
+    Claude(ClaudeCommands),
 }
 
 #[derive(Subcommand)]
@@ -165,6 +170,28 @@ pub enum CommunityCommands {
 
     /// Show info about contributing
     Contribute,
+}
+
+#[derive(Subcommand)]
+pub enum ClaudeCommands {
+    /// Install a prompt as a Claude skill or command
+    Install {
+        /// ID or name of the prompt to install
+        id: String,
+
+        /// Install as skill (default) or command
+        #[arg(long, value_parser = ["skill", "command"], default_value = "skill")]
+        as_type: String,
+    },
+
+    /// List prompts installed in Claude
+    List,
+
+    /// Remove a prompt from Claude
+    Remove {
+        /// Name of the skill/command to remove
+        name: String,
+    },
 }
 
 pub struct App {
@@ -214,7 +241,94 @@ impl App {
             Commands::Info => self.show_info(),
 
             Commands::Community(cmd) => self.run_community(cmd),
+
+            Commands::Claude(cmd) => self.run_claude(cmd),
         }
+    }
+
+    fn run_claude(&mut self, cmd: ClaudeCommands) -> Result<()> {
+        match cmd {
+            ClaudeCommands::Install { id, as_type } => self.claude_install(&id, &as_type),
+            ClaudeCommands::List => self.claude_list(),
+            ClaudeCommands::Remove { name } => self.claude_remove(&name),
+        }
+    }
+
+    fn claude_install(&self, id: &str, as_type: &str) -> Result<()> {
+        let prompt = self
+            .bank
+            .get(id)
+            .ok_or_else(|| PromptBankError::PromptNotFound(id.to_string()))?;
+
+        let install_type = match as_type {
+            "command" => InstallType::Command,
+            _ => InstallType::Skill,
+        };
+
+        let claude = ClaudeIntegration::new()?;
+        let path = claude.install(prompt, install_type)?;
+
+        let type_name = match install_type {
+            InstallType::Skill => "skill",
+            InstallType::Command => "command",
+        };
+
+        println!(
+            "{} Installed '{}' as Claude {}",
+            "✓".green(),
+            prompt.name.cyan(),
+            type_name
+        );
+        println!("  Path: {:?}", path);
+        println!(
+            "\n  Use with: {}{}",
+            "/".cyan(),
+            prompt.name
+        );
+
+        Ok(())
+    }
+
+    fn claude_list(&self) -> Result<()> {
+        let claude = ClaudeIntegration::new()?;
+        let (skills, commands) = claude.list_installed()?;
+
+        println!("\n{}", "Claude Integrations".bold().underline());
+        println!("  Directory: {:?}", claude.claude_dir());
+
+        if skills.is_empty() && commands.is_empty() {
+            println!("\n  No prompts installed in Claude.");
+        } else {
+            if !skills.is_empty() {
+                println!("\n  {}:", "Skills".yellow());
+                for skill in skills {
+                    println!("    /{}", skill);
+                }
+            }
+
+            if !commands.is_empty() {
+                println!("\n  {}:", "Commands".yellow());
+                for cmd in commands {
+                    println!("    /{}", cmd);
+                }
+            }
+        }
+
+        println!();
+        Ok(())
+    }
+
+    fn claude_remove(&self, name: &str) -> Result<()> {
+        let claude = ClaudeIntegration::new()?;
+        let removed = claude.remove(name)?;
+
+        if removed {
+            println!("{} Removed '{}' from Claude", "✓".green(), name);
+        } else {
+            println!("{} '{}' not found in Claude", "→".yellow(), name);
+        }
+
+        Ok(())
     }
 
     fn run_community(&mut self, cmd: CommunityCommands) -> Result<()> {
